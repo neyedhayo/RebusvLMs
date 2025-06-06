@@ -1,0 +1,8 @@
+{% for ex in examples[:2] %}
+[Image: {{ ex.filename }}]
+Q: "{{ ex.question }}"
+A: "{{ ex.rationale }}"
+
+{% endfor %}
+[Image: {{ target_filename }}]
+Q: "{{ question }}" {% if cot %}Let's think step by step.{% endif %}
