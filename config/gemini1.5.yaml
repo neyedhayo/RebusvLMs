@@ -1,0 +1,8 @@
+model:
+  name:            "gemini-1.5-flash"
+  api_type:        "studio"
+  api_key:         ${GEMINI_API_KEY}
+  use_vertexai:    false
+  max_output_tokens: 8192
+  supports_cot:    true #false
+  context_window:  1048576
