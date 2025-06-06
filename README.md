@@ -1,6 +1,6 @@
-# Project: VLM Reasoning Evaluation on Idioms Rebus Puzzle Dataset
+# RebusvLMs
 
-This document outlines the proposed codebase structure, directory layout, and key components for running zero-shot and few-shot (with and without CoT) experiments on Gemini 1.5, 2.0, and 2.5 VLMs using the Idioms Rebus Puzzle dataset.
+This project outlines the proposed codebase structure, directory layout, and key components for running zero-shot and few-shot (with and without CoT) experiments on Gemini 1.5, 2.0, and 2.5 VLMs using the Idioms Rebus Puzzle dataset.
 
 ---
 
