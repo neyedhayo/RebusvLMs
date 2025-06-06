@@ -1,0 +1,2 @@
+[Image: {{ target_filename }}]
+Q: "{{ question }}" {% if cot %}Let's think step by step.{% endif %}
