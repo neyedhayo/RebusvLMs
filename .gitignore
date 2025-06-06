@@ -3,3 +3,5 @@ data/sample/
 logs/
 .env
 **/__init__.py
+**/__pycache__/
+
