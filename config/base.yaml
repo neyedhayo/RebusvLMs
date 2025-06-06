@@ -1,0 +1,25 @@
+project: ${GOOGLE_CLOUD_PROJECT}
+location: ${GOOGLE_CLOUD_LOCATION}
+use_vertexai: ${GOOGLE_GENAI_USE_VERTEXAI}
+
+dataset:
+  images_dir:       "data/raw/img"
+  annotations_file: "data/raw/annotations.csv"
+  examples_dir:     "data/sample"
+
+logging:
+  level: "INFO"
+  dir:   "logs"
+
+# --- default prompt styles ---
+prompt_styles:
+  - zero_shot
+  - fewshot2_cot
+  - fewshot3_cot
+  - fewshot2_nocot
+  - fewshot3_nocot
+
+request:
+  batch_size:      4
+  timeout_seconds: 60
+
