@@ -2,3 +2,4 @@ data/raw/img/
 data/sample/
 logs/
 .env
+**/__init__.py
