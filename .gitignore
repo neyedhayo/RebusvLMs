@@ -1,5 +1,5 @@
 data/raw/img/
-data/sample/
+data/sample/**.jpg
 logs/
 .env
 **/__init__.py
