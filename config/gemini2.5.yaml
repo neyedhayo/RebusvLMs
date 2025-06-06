@@ -1,0 +1,7 @@
+model:
+  name:            "projects/${GOOGLE_CLOUD_PROJECT}/locations/${GOOGLE_CLOUD_LOCATION}/publishers/google/models/gemini-2.5-flash-preview-04-17"
+  api_type:         "vertex"
+  use_vertexai:     true
+  max_output_tokens: 65535
+  supports_cot:     true #false
+  context_window:   1048576
