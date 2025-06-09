@@ -35,11 +35,21 @@ def load_config_files(config_name):
     # Merge configs (model config overrides base config)
     merged_config = {**base_config, **model_config}
     
-    # Expand environment variables in model name
-    if "model" in merged_config and "name" in merged_config["model"]:
-        merged_config["model"]["name"] = os.path.expandvars(merged_config["model"]["name"])
+    # Expand ALL environment variables recursively
+    merged_config = expand_env_vars_recursive(merged_config)
     
     return merged_config
+
+def expand_env_vars_recursive(obj):
+    """Recursively expand environment variables in config object"""
+    if isinstance(obj, dict):
+        return {k: expand_env_vars_recursive(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [expand_env_vars_recursive(item) for item in obj]
+    elif isinstance(obj, str):
+        return os.path.expandvars(obj)
+    else:
+        return obj
 
 def get_model_client(cfg):
     """Dispatch to the right client based on use_vertexai and model name."""

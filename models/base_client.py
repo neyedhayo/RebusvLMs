@@ -103,12 +103,19 @@ class BaseClient:
         
         img_b64 = base64.b64encode(img_data).decode()
         
-        # Build content for Vertex AI
+        # Build content for Vertex AI using the correct format
         contents = [
-            prompt,
             {
-                "mime_type": "image/jpeg",
-                "data": img_b64
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": img_b64
+                        }
+                    }
+                ]
             }
         ]
         
@@ -131,3 +138,4 @@ class BaseClient:
                     return candidate.content.text.strip()
         
         return "No response text found"
+    
