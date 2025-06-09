@@ -1,6 +1,6 @@
 # --------------- GEMINI-1.5 (STUDIO API) ON 5 PROMPT STYLES -----------------
 # Zero‐Shot (no examples_count needed)
-python experiments/run_experiment.py \
+python -m experiments.run_experiment.py \
   --config gemini1.5.yaml \
   --prompt-style zero_shot
 

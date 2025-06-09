@@ -1,17 +1,23 @@
 # Core Google Cloud dependencies
 google-cloud-aiplatform>=1.38.0
-# google-genai>=0.3.0
+google-genai>=0.3.0
+
+# Official Google Generative AI (for Studio API)
+google-generativeai>=0.8.0
+
+# Image processing (required by google-generativeai)
+Pillow>=10.0.0
 
 # Configuration and templating
-# pyyaml>=6.0
-# jinja2>=3.1.0
+pyyaml>=6.0
+jinja2>=3.1.0
 
 # Data handling
-# pandas>=2.0.0
+pandas>=2.0.0
 
 # Evaluation metrics
-# scikit-learn>=1.3.0
+scikit-learn>=1.3.0
 
 # Optional: for better error messages and debugging
-# google-auth>=2.17.0
-# google-api-core>=2.11.0
+google-auth>=2.17.0
+google-api-core>=2.11.0
