@@ -83,7 +83,7 @@ class BaseClient:
                     contents=contents,
                     config={"max_output_tokens": self.config["model"]["max_output_tokens"]}
                 )
-                return getattr(response, "text", None) or response.candidates[0].content.strip()
+                return getattr(response, "text", None) or response.candidates[0].content.parts[0].text
 
             except Exception as e:
                 print(f"Error on attempt {attempt}: {type(e).__name__}: {e}")
