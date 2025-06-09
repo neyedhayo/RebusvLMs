@@ -59,8 +59,18 @@ def load_dataset(
     Combines raw images + annotations into a list of (image_path, answer).
     Matches on filename without extension, so '001.png' pairs with key '001'.
     """
+    if not os.path.exists(images_dir):
+        raise FileNotFoundError(f"Images directory not found: {images_dir}")
+    if not os.path.exists(annotations_file):
+        raise FileNotFoundError(f"Annotations file not found: {annotations_file}")
+    
+    print(f"[load_data] Loading annotations from: {annotations_file}")
     ann_map = load_annotations(annotations_file)
+    print(f"[load_data] Found {len(ann_map)} annotations")
+    
+    print(f"[load_data] Loading images from: {images_dir}")
     image_paths = list_image_paths(images_dir)
+    print(f"[load_data] Found {len(image_paths)} image files")
 
     dataset: List[Tuple[str, str]] = []
     for img_path in image_paths:
@@ -70,6 +80,8 @@ def load_dataset(
             dataset.append((img_path, ann_map[key]))
         else:
             print(f"[load_data] WARNING: no annotation for image '{fname}', skipping.")
+    
+    print(f"[load_data] Successfully matched {len(dataset)} image-annotation pairs")
     return dataset
 
 

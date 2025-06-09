@@ -1,7 +1,13 @@
+import sys
 import os
 import json
 import argparse
 from typing import List
+
+# Add project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from sklearn.metrics import accuracy_score, f1_score
 
 

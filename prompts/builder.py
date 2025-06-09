@@ -7,12 +7,22 @@ class PromptBuilder:
     def __init__(self, config: Dict[str,Any]):
         base = os.path.dirname(os.path.abspath(__file__))
         self.templates_dir = os.path.join(base, "templates")
-        # examples_dir points at data/sample
-        self.examples_dir = config["dataset"]["examples_dir"]
+        
+        # Handle both relative and absolute paths
+        examples_dir = config["dataset"]["examples_dir"]
+        if not os.path.isabs(examples_dir):
+            project_root = os.path.dirname(os.path.dirname(base))
+            self.examples_dir = os.path.join(project_root, examples_dir)
+        else:
+            self.examples_dir = examples_dir
+            
         # full path to your JSON
         self.prompts_json = os.path.join(self.examples_dir, "rebus_prompts.json")
 
         # load the JSON once
+        if not os.path.exists(self.prompts_json):
+            raise FileNotFoundError(f"Sample prompts file not found: {self.prompts_json}")
+            
         with open(self.prompts_json, 'r', encoding='utf-8') as f:
             self.sample_prompts = json.load(f)
 
