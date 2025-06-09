@@ -3,34 +3,50 @@ from typing import Any, Dict, List
 
 from google import genai
 from google.genai import types  # type: ignore
-from google.api_core.client_options import ClientOptions  # type: ignore # new import
 
 class BaseClient:
     def __init__(self, config: Dict[str, Any]):
         """
         Initializes the GenAI client:
-          - For Vertex AI, supplies vertexai=True, project, location,
-            and a client_options with the regional api_endpoint.
+          - For Vertex AI, supplies vertexai=True, project, location
           - For Studio, supplies api_key.
         """
         use_vertexai = config["model"].get("use_vertexai", True)
 
         if use_vertexai:
-            # build the regional endpoint
+            # For Vertex AI - try different initialization methods
             region = config["location"]
-            endpoint = f"{region}-genai.googleapis.com"
-
-            client_opts = ClientOptions(api_endpoint=endpoint)
-            self.client = genai.Client(
-                vertexai=True,
-                project=config["project"],
-                location=region,
-                client_options=client_opts
-            )
+            project = config["project"]
+            
+            # Try Method 1: with api_endpoint parameter
+            try:
+                endpoint = f"{region}-genai.googleapis.com"
+                self.client = genai.Client(
+                    vertexai=True,
+                    project=project,
+                    location=region,
+                    api_endpoint=endpoint
+                )
+                print(f"[BaseClient] Using Vertex AI with custom endpoint: {endpoint}")
+            except Exception:
+                # Try Method 2: without custom endpoint (fallback)
+                try:
+                    self.client = genai.Client(
+                        vertexai=True,
+                        project=project,
+                        location=region
+                    )
+                    print(f"[BaseClient] Using Vertex AI with default endpoint")
+                except Exception as e:
+                    # Try Method 3: basic initialization
+                    self.client = genai.Client(vertexai=True)
+                    print(f"[BaseClient] Using Vertex AI with basic initialization")
         else:
+            # For Studio API
             self.client = genai.Client(
                 api_key=config["model"]["api_key"]
             )
+            print(f"[BaseClient] Using Studio API")
 
         self.config = config
         self.max_retries = 3
@@ -61,7 +77,7 @@ class BaseClient:
         # 4) Call with retries
         for attempt in range(1, self.max_retries + 1):
             try:
-                print(f"Attempt {attempt}: Calling {model_name} on {self.client._client_options.api_endpoint}…")
+                print(f"Attempt {attempt}: Calling {model_name}...")
                 response = self.client.models.generate_content(
                     model=model_name,
                     contents=contents,
