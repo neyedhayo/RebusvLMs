@@ -16,18 +16,22 @@ def load_annotations(annotations_file: str) -> Dict[str, str]:
         try:
             idx_img = headers.index('filename')
             idx_ans = headers.index('solution')
-        except ValueError:
+        except ValueError as e:
+            available_headers = ', '.join(headers)
             raise ValueError(
-                f"CSV {annotations_file} must have columns 'filename' and 'solution' (case-insensitive)"
-            )
+                f"CSV {annotations_file} must have columns 'filename' and 'solution' (case-insensitive). "
+                f"Found headers: {available_headers}"
+            ) from e
 
         for row in reader:
+            if len(row) <= max(idx_img, idx_ans):  # Skip short rows
+                continue
             key = row[idx_img].strip()
             answer = row[idx_ans].strip()
             if key and answer:
                 annotations[key] = answer
-    return annotations
 
+    return annotations
 
 def list_image_paths(images_dir: str, extensions: List[str] = None) -> List[str]:
     """
