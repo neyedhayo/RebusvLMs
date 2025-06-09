@@ -4,8 +4,8 @@ import argparse
 import datetime
 import json
 
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+# project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# sys.path.insert(0, project_root)
 
 from data.load_data import load_dataset
 from prompts.builder import PromptBuilder
