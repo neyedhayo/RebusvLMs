@@ -1,8 +1,6 @@
 # --------------- GEMINI-1.5 (STUDIO API) ON 5 PROMPT STYLES -----------------
 # Zero‐Shot (no examples_count needed)
-python -m experiments.run_experiment.py \
-  --config gemini1.5.yaml \
-  --prompt-style zero_shot
+python -m experiments.run_experiment --config gemini1.5.yaml --prompt-style zero_shot
 
 # 2-Shot + CoT
 python -m experiments.run_experiment.py \
@@ -31,9 +29,7 @@ python -m experiments.run_experiment.py \
 
 # --------------- GEMINI-2.0 (VERTEX AI) ON 5 PROMPT STYLES -----------------
 # Zero‐Shot
-python -m experiments.run_experiment.py \
-  --config gemini2.0.yaml \
-  --prompt-style zero_shot
+python -m experiments.run_experiment --config gemini2.0.yaml --prompt-style zero_shot
 
 # 2-Shot + CoT
 python -m experiments.run_experiment.py \
@@ -100,6 +96,9 @@ python -m experiments.evaluate.py \
 python -m experiments.evaluate.py \
   --timestamp 20250520_154512 \
   --use-f1
+
+# After each experiment, just run:
+python -m experiments.evaluate --timestamp $(ls logs/ | tail -1) --use-f1
 
 # --------------- DRY RUN (5 SAMPLES) -----------------
 python -m experiments.run_experiment.py \
