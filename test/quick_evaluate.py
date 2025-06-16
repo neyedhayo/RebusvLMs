@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-"""
-Quick evaluation helper - automatically evaluates the most recent experiment
-"""
 import os
 import sys
 import subprocess

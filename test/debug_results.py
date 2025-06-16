@@ -1,8 +1,8 @@
-import os
-import sys
 import json
-import argparse
+import sys
+import os
 import re
+from collections import Counter
 from typing import List
 
 # Add project root to Python path
@@ -10,229 +10,477 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 def extract_idiom(prediction: str) -> str:
-    """
-    Extract the actual idiom from verbose model predictions.
-    Handles various formats like quotes, bold text, keywords, etc.
-    """
+    """Same improved extraction logic as in evaluate.py"""
     if not prediction or not isinstance(prediction, str):
         return ""
     
-    # Clean the text first
     text = prediction.strip()
     
-    # Pattern 1: Text in bold quotes **"idiom"**
-    patterns = [
-        r'\*\*["\']([^"\']+)["\']?\*\*',  # **"jump the gun"**
-        r'\*\*([^*]+)\*\*',               # **jump the gun**
-        r'["\']([^"\']+)["\']',           # "jump the gun"
-        r'answer is[:\s]*["\']?([^"\'.\n]+)["\']?',  # answer is: "jump the gun"
-        r'idiom is[:\s]*["\']?([^"\'.\n]+)["\']?',   # idiom is: jump the gun
-        r'represents[:\s]*["\']?([^"\'.\n]+)["\']?', # represents: jump the gun
-        r'solution[:\s]*["\']?([^"\'.\n]+)["\']?',   # solution: jump the gun
-        r'puzzle is[:\s]*["\']?([^"\'.\n]+)["\']?',  # puzzle is: jump the gun
+    # Priority 1: Context-aware patterns
+    context_patterns = [
+        r'(?:idiom|answer|represents|solution|puzzle)\s*(?:is)?[:\s]+\*\*["\']?([^"\'*\n]+)["\']?\*\*',
+        r'(?:idiom|answer|represents|solution|puzzle)\s*(?:is)?[:\s]+["\']([^"\'.\n]+)["\']',
+        r'(?:idiom|answer|represents|solution|puzzle)\s*(?:is)?[:\s]+\*\*([^*\n]+)\*\*',
+        r'(?:suggests|therefore)[^:]*[:\s]+\*\*["\']?([^"\'*\n]+)["\']?\*\*',
+        r'(?:suggests|therefore)[^:]*[:\s]+["\']([^"\'.\n]+)["\']',
     ]
     
-    for pattern in patterns:
+    for pattern in context_patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         if matches:
-            # Take the longest match (most likely to be the full idiom)
-            idiom = max(matches, key=len).strip()
-            # Clean up the extracted idiom
-            idiom = re.sub(r'^(the\s+)?', '', idiom.lower().strip())  # Remove leading "the"
-            idiom = re.sub(r'[.,!?]*$', '', idiom)  # Remove trailing punctuation
-            if len(idiom) > 3:  # Reasonable idiom length
+            idiom = clean_extracted_idiom(matches[0])
+            if len(idiom) > 2:
                 return idiom
     
-    # Fallback: Look for the last quoted text or capitalized phrase
-    fallback_patterns = [
-        r'([A-Z][a-z]+(?:\s+[a-z]+)*(?:\s+the\s+[a-z]+)*)',  # Capitalized phrases
-        r'([a-z]+\s+the\s+[a-z]+)',  # "verb the noun" patterns
+    # Priority 2: Bold text with filtering
+    bold_patterns = [
+        r'\*\*["\']([^"\']+)["\']?\*\*',
+        r'\*\*([^*]+)\*\*',
     ]
     
-    for pattern in fallback_patterns:
-        matches = re.findall(pattern, text)
+    for pattern in bold_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
         if matches:
-            idiom = matches[-1].lower().strip()  # Take the last match
-            if len(idiom) > 3:
+            valid_matches = []
+            for match in matches:
+                cleaned = clean_extracted_idiom(match)
+                if not is_description_text(cleaned):
+                    valid_matches.append(cleaned)
+            
+            if valid_matches:
+                idiom = select_best_idiom_candidate(valid_matches)
+                if idiom:
+                    return idiom
+    
+    # Priority 3: Filtered quotes
+    quote_matches = re.findall(r'["\']([^"\']{4,30})["\']', text)
+    if quote_matches:
+        valid_matches = []
+        for match in quote_matches:
+            cleaned = clean_extracted_idiom(match)
+            if is_likely_idiom(cleaned) and not is_description_text(cleaned):
+                valid_matches.append(cleaned)
+        
+        if valid_matches:
+            idiom = select_best_idiom_candidate(valid_matches)
+            if idiom:
                 return idiom
     
-    # Last resort: return the original prediction truncated
     return text[:50].lower().strip()
 
-def normalize_idiom(idiom: str) -> str:
-    """Normalize idioms for comparison (handle variations)"""
+def clean_extracted_idiom(idiom: str) -> str:
+    """Clean up extracted idiom text"""
     if not idiom:
         return ""
     
-    # Convert to lowercase and strip
-    normalized = idiom.lower().strip()
+    cleaned = idiom.strip()
+    cleaned = re.sub(r'^(the\s+)?', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'[.,!?;:]*$', '', cleaned)
+    return cleaned
+
+def normalize_idiom(idiom: str) -> str:
+    """Same normalization logic as in evaluate.py"""
+    if not idiom:
+        return ""
     
-    # Remove common variations
-    normalized = re.sub(r'^(a\s+|an\s+|the\s+)', '', normalized)  # Remove articles
-    normalized = re.sub(r'[.,!?;:]*$', '', normalized)  # Remove punctuation
-    normalized = re.sub(r'\s+', ' ', normalized)  # Normalize whitespace
+    normalized = idiom.lower().strip()
+    normalized = re.sub(r'^(a\s+|an\s+|the\s+)', '', normalized)
+    normalized = re.sub(r'[.,!?;:]*$', '', normalized)
+    normalized = re.sub(r'\s+', ' ', normalized)
     
     return normalized.strip()
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Evaluate VLM rebus-puzzle results with idiom extraction."
-    )
-    parser.add_argument(
-        "--timestamp",
-        required=True,
-        help="Timestamp folder under logs/, e.g. 20250520_142530"
-    )
-    parser.add_argument(
-        "--logs-dir",
-        default="logs",
-        help="Root logs directory (default: logs/)"
-    )
-    parser.add_argument(
-        "--use-f1",
-        action="store_true",
-        help="Also compute macro F1 over tokenized predictions"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Show detailed extraction results for debugging"
-    )
-    return parser.parse_args()
-
-def load_results(logs_dir: str, timestamp: str) -> List[dict]:
-    """
-    Reads logs/<timestamp>/results.json and returns the list of
-    {image_id, ground_truth, prediction}.
-    """
-    # Handle both relative and absolute paths
-    if not os.path.isabs(logs_dir):
-        logs_dir = os.path.join(project_root, logs_dir)
-    
-    path = os.path.join(logs_dir, timestamp, "results.json")
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"No results.json at {path}")
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def tokenize(text: str) -> List[str]:
-    """Simple whitespace tokenizer, lowercased."""
-    return text.lower().split()
-
-def calculate_token_f1(ground_truth: str, prediction: str) -> float:
-    """Calculate F1 score based on token overlap"""
-    gt_tokens = set(tokenize(ground_truth))
-    pred_tokens = set(tokenize(prediction))
-    
-    if not gt_tokens and not pred_tokens:
-        return 1.0
-    if not gt_tokens or not pred_tokens:
-        return 0.0
-    
-    intersection = gt_tokens.intersection(pred_tokens)
-    precision = len(intersection) / len(pred_tokens)
-    recall = len(intersection) / len(gt_tokens)
-    
-    if precision + recall == 0:
-        return 0.0
-    
-    return 2 * precision * recall / (precision + recall)
-
-def evaluate(results: List[dict], use_f1: bool = False, debug: bool = False) -> dict:
-    """
-    Compute accuracy metrics with idiom extraction.
-    Returns a metrics dict.
-    """
-    # Extract idioms from predictions
-    extracted_results = []
-    extraction_success = 0
-    
-    for result in results:
-        ground_truth = normalize_idiom(result["ground_truth"])
-        raw_prediction = result["prediction"]
-        extracted_prediction = extract_idiom(raw_prediction)
-        normalized_prediction = normalize_idiom(extracted_prediction)
-        
-        # Check if extraction seems successful
-        if len(extracted_prediction) > 0 and len(extracted_prediction) < len(raw_prediction):
-            extraction_success += 1
-        
-        extracted_results.append({
-            "image_id": result["image_id"],
-            "ground_truth": ground_truth,
-            "prediction": normalized_prediction,
-            "raw_prediction": raw_prediction,
-            "extracted_prediction": extracted_prediction
-        })
-        
-        if debug and len(extracted_results) <= 5:  # Show first 5 for debugging
-            print(f"\n--- Debug Example {len(extracted_results)} ---")
-            print(f"Image: {result['image_id']}")
-            print(f"Ground Truth: '{ground_truth}'")
-            print(f"Raw Prediction: '{raw_prediction[:100]}...'")
-            print(f"Extracted: '{extracted_prediction}'")
-            print(f"Normalized: '{normalized_prediction}'")
-            print(f"Match: {'✅' if ground_truth == normalized_prediction else '❌'}")
-    
-    # Calculate exact match accuracy on extracted idioms
-    y_true = [r["ground_truth"] for r in extracted_results]
-    y_pred = [r["prediction"] for r in extracted_results]
-    
-    exact_matches = sum(1 for gt, pred in zip(y_true, y_pred) if gt == pred)
-    exact_accuracy = exact_matches / len(y_true) if y_true else 0
-    
-    # Calculate partial match (ground truth appears in prediction)
-    partial_matches = sum(1 for gt, pred in zip(y_true, y_pred) if gt in pred or pred in gt)
-    partial_accuracy = partial_matches / len(y_true) if y_true else 0
-    
-    metrics = {
-        "exact_match_accuracy": exact_accuracy,
-        "partial_match_accuracy": partial_accuracy,
-        "extraction_success_rate": extraction_success / len(results) if results else 0,
-        "total_samples": len(results)
+def analyze_prediction_patterns(results: List[dict]) -> dict:
+    """Analyze common patterns in predictions"""
+    patterns = {
+        'has_bold_text': 0,
+        'has_quotes': 0,
+        'has_answer_keyword': 0,
+        'has_idiom_keyword': 0,
+        'has_explanation': 0,
+        'average_length': 0,
+        'extraction_patterns': Counter()
     }
     
-    if use_f1:
-        # Calculate F1 scores
-        token_f1s = [calculate_token_f1(gt, pred) for gt, pred in zip(y_true, y_pred)]
-        metrics["macro_f1"] = sum(token_f1s) / len(token_f1s) if token_f1s else 0.0
+    total_length = 0
     
-    return metrics
+    for result in results:
+        pred = result['prediction']
+        total_length += len(pred)
+        
+        if '**' in pred:
+            patterns['has_bold_text'] += 1
+        if '"' in pred or "'" in pred:
+            patterns['has_quotes'] += 1
+        if re.search(r'answer\s+is', pred, re.IGNORECASE):
+            patterns['has_answer_keyword'] += 1
+        if re.search(r'idiom', pred, re.IGNORECASE):
+            patterns['has_idiom_keyword'] += 1
+        if len(pred) > 50:  # Likely has explanation
+            patterns['has_explanation'] += 1
+        
+        # Track which pattern successfully extracted
+        extracted = extract_idiom(pred)
+        if extracted and len(extracted) < len(pred):
+            # Determine which pattern worked
+            if '**' in pred and extracted in pred.replace('*', ''):
+                patterns['extraction_patterns']['bold_text'] += 1
+            elif '"' in pred:
+                patterns['extraction_patterns']['quotes'] += 1
+            elif 'answer' in pred.lower():
+                patterns['extraction_patterns']['answer_keyword'] += 1
+            else:
+                patterns['extraction_patterns']['fallback'] += 1
+        else:
+            patterns['extraction_patterns']['failed'] += 1
+    
+    patterns['average_length'] = total_length / len(results) if results else 0
+    
+    return patterns
 
-def main():
-    args = parse_args()
+def debug_results(timestamp: str):
+    """Examine the results file to understand accuracy and extraction issues"""
+    results_path = f"logs/{timestamp}/results.json"
     
-    # Handle both relative and absolute paths
-    logs_dir = args.logs_dir
-    if not os.path.isabs(logs_dir):
-        logs_dir = os.path.join(project_root, logs_dir)
-    
-    # 1. Load results
-    print(f"Loading results from {args.timestamp}...")
-    results = load_results(logs_dir, args.timestamp)
-    
-    # 2. Evaluate with idiom extraction
-    print(f"Evaluating {len(results)} samples...")
-    metrics = evaluate(results, use_f1=args.use_f1, debug=args.debug)
-    
-    # 3. Write metrics.json
-    out_dir = os.path.join(logs_dir, args.timestamp)
-    metrics_path = os.path.join(out_dir, "metrics.json")
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=2)
-    
-    # 4. Print summary
-    print(f"\n📊 Results for run {args.timestamp}")
-    print("=" * 50)
-    print(f"  📈 Exact-match accuracy: {metrics['exact_match_accuracy']:.4f} ({metrics['exact_match_accuracy']*100:.1f}%)")
-    print(f"  📈 Partial-match accuracy: {metrics['partial_match_accuracy']:.4f} ({metrics['partial_match_accuracy']*100:.1f}%)")
-    print(f"  🔧 Extraction success rate: {metrics['extraction_success_rate']:.4f} ({metrics['extraction_success_rate']*100:.1f}%)")
-    
-    if args.use_f1:
-        print(f"  📈 Macro F1 (token-level): {metrics.get('macro_f1',0):.4f}")
-    
-    print(f"  📁 Total samples: {metrics['total_samples']}")
-    print(f"\n💾 Metrics written to {metrics_path}")
+    try:
+        with open(results_path, 'r') as f:
+            results = json.load(f)
+        
+        print(f"🔍 Debugging Results for {timestamp}")
+        print("=" * 60)
+        print(f"📊 Total samples: {len(results)}")
+        
+        # Analyze prediction patterns
+        patterns = analyze_prediction_patterns(results)
+        
+        print(f"\n📋 Prediction Patterns:")
+        print(f"  📝 Average prediction length: {patterns['average_length']:.0f} characters")
+        print(f"  📝 Has bold text (**): {patterns['has_bold_text']}/{len(results)} ({patterns['has_bold_text']/len(results)*100:.1f}%)")
+        print(f"  📝 Has quotes: {patterns['has_quotes']}/{len(results)} ({patterns['has_quotes']/len(results)*100:.1f}%)")
+        print(f"  📝 Has 'answer' keyword: {patterns['has_answer_keyword']}/{len(results)} ({patterns['has_answer_keyword']/len(results)*100:.1f}%)")
+        print(f"  📝 Has 'idiom' keyword: {patterns['has_idiom_keyword']}/{len(results)} ({patterns['has_idiom_keyword']/len(results)*100:.1f}%)")
+        print(f"  📝 Has explanations (>50 chars): {patterns['has_explanation']}/{len(results)} ({patterns['has_explanation']/len(results)*100:.1f}%)")
+        
+        print(f"\n🔧 Extraction Success by Pattern:")
+        for pattern, count in patterns['extraction_patterns'].most_common():
+            percentage = count / len(results) * 100
+            print(f"  {pattern}: {count}/{len(results)} ({percentage:.1f}%)")
+        
+        # Show examples with extraction analysis
+        print(f"\n📋 Sample Extractions (First 10):")
+        exact_matches = 0
+        partial_matches = 0
+        
+        for i, result in enumerate(results[:10]):
+            print(f"\n--- Example {i+1}: {result['image_id']} ---")
+            
+            ground_truth = normalize_idiom(result['ground_truth'])
+            raw_prediction = result['prediction']
+            extracted = extract_idiom(raw_prediction)
+            normalized_pred = normalize_idiom(extracted)
+            
+            print(f"Ground Truth: '{ground_truth}'")
+            print(f"Raw Prediction: '{raw_prediction[:80]}...'")
+            print(f"Extracted: '{extracted}'")
+            print(f"Normalized: '{normalized_pred}'")
+            
+            exact_match = ground_truth == normalized_pred
+            partial_match = ground_truth in normalized_pred or normalized_pred in ground_truth
+            
+            print(f"Exact Match: {'✅' if exact_match else '❌'}")
+            print(f"Partial Match: {'✅' if partial_match else '❌'}")
+            
+            if exact_match:
+                exact_matches += 1
+            if partial_match:
+                partial_matches += 1
+        
+        # Calculate overall accuracy estimates
+        print(f"\n📊 Accuracy Estimates (from sample):")
+        sample_size = min(10, len(results))
+        estimated_exact = exact_matches / sample_size * 100
+        estimated_partial = partial_matches / sample_size * 100
+        
+        print(f"  Estimated Exact Match: ~{estimated_exact:.1f}%")
+        print(f"  Estimated Partial Match: ~{estimated_partial:.1f}%")
+        
+        # Show some successful extractions
+        print(f"\n✅ Examples of Successful Extractions:")
+        success_count = 0
+        for result in results:
+            if success_count >= 5:
+                break
+                
+            ground_truth = normalize_idiom(result['ground_truth'])
+            extracted = extract_idiom(result['prediction'])
+            normalized_pred = normalize_idiom(extracted)
+            
+            if ground_truth == normalized_pred:
+                success_count += 1
+                print(f"\n{success_count}. {result['image_id']}")
+                print(f"   Expected: '{ground_truth}'")
+                print(f"   Extracted: '{normalized_pred}' ✅")
+                print(f"   From: '{result['prediction'][:60]}...'")
+        
+        print(f"\n💡 Recommendations:")
+        print(f"1. Run: python -m experiments.evaluate --timestamp {timestamp} --use-f1 --debug")
+        print(f"2. The extraction should improve accuracy from ~0% to ~{estimated_exact:.0f}%")
+        print(f"3. Partial matching should reach ~{estimated_partial:.0f}%")
+        
+    except FileNotFoundError:
+        print(f"❌ Results file not found: {results_path}")
+        print(f"💡 Make sure you've run an experiment first:")
+        print(f"   python -m experiments.run_experiment --config gemini1.5.yaml --prompt-style zero_shot")
+    except Exception as e:
+        print(f"❌ Error reading results: {e}")
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        print("Usage: python debug_results.py <timestamp>")
+        print("Example: python debug_results.py 20250609_134015")
+        sys.exit(1)
+    
+    timestamp = sys.argv[1]
+    debug_results(timestamp)
+
+def is_description_text(text: str) -> bool:
+    """Check if text looks like description rather than an idiom"""
+    if not text:
+        return True
+    
+    description_words = [
+        'word', 'letter', 'image', 'puzzle', 'shows', 'written', 'drawn', 
+        'depicts', 'represents', 'visual', 'graphic', 'picture', 'illustration',
+        'stacked', 'positioned', 'placed', 'arranged', 'times', 'bottom', 'top',
+        'left', 'right', 'corner', 'above', 'below', 'line', 'number'
+    ]
+    
+    text_lower = text.lower()
+    
+    if any(word in text_lower for word in description_words):
+        return True
+    
+    if len(text.split()) == 1 and text.upper() == text:
+        return True
+    
+    return False
+
+def is_likely_idiom(text: str) -> bool:
+    """Check if text looks like a real idiom"""
+    if not text:
+        return False
+    
+    text_lower = text.lower().strip()
+    
+    if len(text_lower) < 3 or len(text_lower) > 50:
+        return False
+    
+    idiom_patterns = [
+        r'\b\w+\s+the\s+\w+',
+        r'\b\w+\s+(in|on|under|over|up|down|out|off)\s+',
+        r'\b(break|cut|kick|jump|throw|catch|hit|run|get|put|take)\s+',
+    ]
+    
+    for pattern in idiom_patterns:
+        if re.search(pattern, text_lower):
+            return True
+    
+    return len(text.split()) >= 2
+
+def select_best_idiom_candidate(candidates: List[str]) -> str:
+    """Select the best idiom candidate from a list"""
+    if not candidates:
+        return ""
+    
+    if len(candidates) == 1:
+        return candidates[0]
+    
+    scored_candidates = []
+    
+    for candidate in candidates:
+        score = 0
+        candidate_lower = candidate.lower()
+        
+        if re.search(r'\w+\s+the\s+\w+', candidate_lower):
+            score += 10
+        if any(word in candidate_lower for word in ['kick', 'jump', 'cut', 'break', 'throw']):
+            score += 5
+        if any(word in candidate_lower for word in ['under', 'over', 'in', 'on', 'out']):
+            score += 3
+        
+        if any(word in candidate_lower for word in ['word', 'letter', 'shows', 'depicts']):
+            score -= 10
+        
+        word_count = len(candidate.split())
+        if 2 <= word_count <= 5:
+            score += word_count
+        
+        scored_candidates.append((score, candidate))
+    
+    scored_candidates.sort(key=lambda x: x[0], reverse=True)
+    return scored_candidates[0][1]
+
+def normalize_idiom(idiom: str) -> str:
+    """Same normalization logic as in evaluate.py"""
+    if not idiom:
+        return ""
+    
+    normalized = idiom.lower().strip()
+    normalized = re.sub(r'^(a\s+|an\s+|the\s+)', '', normalized)
+    normalized = re.sub(r'[.,!?;:]*$', '', normalized)
+    normalized = re.sub(r'\s+', ' ', normalized)
+    
+    return normalized.strip()
+
+def analyze_prediction_patterns(results: List[dict]) -> dict:
+    """Analyze common patterns in predictions"""
+    patterns = {
+        'has_bold_text': 0,
+        'has_quotes': 0,
+        'has_answer_keyword': 0,
+        'has_idiom_keyword': 0,
+        'has_explanation': 0,
+        'average_length': 0,
+        'extraction_patterns': Counter()
+    }
+    
+    total_length = 0
+    
+    for result in results:
+        pred = result['prediction']
+        total_length += len(pred)
+        
+        if '**' in pred:
+            patterns['has_bold_text'] += 1
+        if '"' in pred or "'" in pred:
+            patterns['has_quotes'] += 1
+        if re.search(r'answer\s+is', pred, re.IGNORECASE):
+            patterns['has_answer_keyword'] += 1
+        if re.search(r'idiom', pred, re.IGNORECASE):
+            patterns['has_idiom_keyword'] += 1
+        if len(pred) > 50:  # Likely has explanation
+            patterns['has_explanation'] += 1
+        
+        # Track which pattern successfully extracted
+        extracted = extract_idiom(pred)
+        if extracted and len(extracted) < len(pred):
+            # Determine which pattern worked
+            if '**' in pred and extracted in pred.replace('*', ''):
+                patterns['extraction_patterns']['bold_text'] += 1
+            elif '"' in pred:
+                patterns['extraction_patterns']['quotes'] += 1
+            elif 'answer' in pred.lower():
+                patterns['extraction_patterns']['answer_keyword'] += 1
+            else:
+                patterns['extraction_patterns']['fallback'] += 1
+        else:
+            patterns['extraction_patterns']['failed'] += 1
+    
+    patterns['average_length'] = total_length / len(results) if results else 0
+    
+    return patterns
+
+def debug_results(timestamp: str):
+    """Examine the results file to understand accuracy and extraction issues"""
+    results_path = f"logs/{timestamp}/results.json"
+    
+    try:
+        with open(results_path, 'r') as f:
+            results = json.load(f)
+        
+        print(f"🔍 Debugging Results for {timestamp}")
+        print("=" * 60)
+        print(f"📊 Total samples: {len(results)}")
+        
+        # Analyze prediction patterns
+        patterns = analyze_prediction_patterns(results)
+        
+        print(f"\n📋 Prediction Patterns:")
+        print(f"  📝 Average prediction length: {patterns['average_length']:.0f} characters")
+        print(f"  📝 Has bold text (**): {patterns['has_bold_text']}/{len(results)} ({patterns['has_bold_text']/len(results)*100:.1f}%)")
+        print(f"  📝 Has quotes: {patterns['has_quotes']}/{len(results)} ({patterns['has_quotes']/len(results)*100:.1f}%)")
+        print(f"  📝 Has 'answer' keyword: {patterns['has_answer_keyword']}/{len(results)} ({patterns['has_answer_keyword']/len(results)*100:.1f}%)")
+        print(f"  📝 Has 'idiom' keyword: {patterns['has_idiom_keyword']}/{len(results)} ({patterns['has_idiom_keyword']/len(results)*100:.1f}%)")
+        print(f"  📝 Has explanations (>50 chars): {patterns['has_explanation']}/{len(results)} ({patterns['has_explanation']/len(results)*100:.1f}%)")
+        
+        print(f"\n🔧 Extraction Success by Pattern:")
+        for pattern, count in patterns['extraction_patterns'].most_common():
+            percentage = count / len(results) * 100
+            print(f"  {pattern}: {count}/{len(results)} ({percentage:.1f}%)")
+        
+        # Show examples with extraction analysis
+        print(f"\n📋 Sample Extractions (First 10):")
+        exact_matches = 0
+        partial_matches = 0
+        
+        for i, result in enumerate(results[:10]):
+            print(f"\n--- Example {i+1}: {result['image_id']} ---")
+            
+            ground_truth = normalize_idiom(result['ground_truth'])
+            raw_prediction = result['prediction']
+            extracted = extract_idiom(raw_prediction)
+            normalized_pred = normalize_idiom(extracted)
+            
+            print(f"Ground Truth: '{ground_truth}'")
+            print(f"Raw Prediction: '{raw_prediction[:80]}...'")
+            print(f"Extracted: '{extracted}'")
+            print(f"Normalized: '{normalized_pred}'")
+            
+            exact_match = ground_truth == normalized_pred
+            partial_match = ground_truth in normalized_pred or normalized_pred in ground_truth
+            
+            print(f"Exact Match: {'✅' if exact_match else '❌'}")
+            print(f"Partial Match: {'✅' if partial_match else '❌'}")
+            
+            if exact_match:
+                exact_matches += 1
+            if partial_match:
+                partial_matches += 1
+        
+        # Calculate overall accuracy estimates
+        print(f"\n📊 Accuracy Estimates (from sample):")
+        sample_size = min(10, len(results))
+        estimated_exact = exact_matches / sample_size * 100
+        estimated_partial = partial_matches / sample_size * 100
+        
+        print(f"  Estimated Exact Match: ~{estimated_exact:.1f}%")
+        print(f"  Estimated Partial Match: ~{estimated_partial:.1f}%")
+        
+        # Show some successful extractions
+        print(f"\n✅ Examples of Successful Extractions:")
+        success_count = 0
+        for result in results:
+            if success_count >= 5:
+                break
+                
+            ground_truth = normalize_idiom(result['ground_truth'])
+            extracted = extract_idiom(result['prediction'])
+            normalized_pred = normalize_idiom(extracted)
+            
+            if ground_truth == normalized_pred:
+                success_count += 1
+                print(f"\n{success_count}. {result['image_id']}")
+                print(f"   Expected: '{ground_truth}'")
+                print(f"   Extracted: '{normalized_pred}' ✅")
+                print(f"   From: '{result['prediction'][:60]}...'")
+        
+        print(f"\n💡 Recommendations:")
+        print(f"1. Run: python -m experiments.evaluate --timestamp {timestamp} --use-f1 --debug")
+        print(f"2. The extraction should improve accuracy from ~0% to ~{estimated_exact:.0f}%")
+        print(f"3. Partial matching should reach ~{estimated_partial:.0f}%")
+        
+    except FileNotFoundError:
+        print(f"❌ Results file not found: {results_path}")
+        print(f"💡 Make sure you've run an experiment first:")
+        print(f"   python -m experiments.run_experiment --config gemini1.5.yaml --prompt-style zero_shot")
+    except Exception as e:
+        print(f"❌ Error reading results: {e}")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python debug_results.py <timestamp>")
+        print("Example: python debug_results.py 20250609_134015")
+        sys.exit(1)
+    
+    timestamp = sys.argv[1]
+    debug_results(timestamp)
