@@ -18,14 +18,19 @@ def extract_idiom(text: str) -> str:
     
     text = text.strip()
     
-    # ADD THIS AS PATTERN 1 (highest priority):
-    triple_brace_pattern = r'\{\{\{([^}]+)\}\}\}'
+    # Pattern 1: Look for triple curly brackets (highest priority) - FIXED
+    triple_brace_pattern = r'\{\{\{([^}]+?)\}\}\}'  # Added ? for non-greedy matching
     match = re.search(triple_brace_pattern, text)
     if match:
         extracted = match.group(1).strip()
-        cleaned = clean_extracted_idiom(extracted)
-        if is_likely_idiom(cleaned):
-            return cleaned
+        # Don't clean triple brackets here, just validate
+        if extracted and len(extracted) > 0:
+            cleaned = clean_extracted_idiom(extracted)
+            if is_likely_idiom(cleaned):
+                return cleaned
+            # If cleaning made it invalid, return the raw extracted content
+            elif len(extracted.split()) >= 2 and len(extracted.split()) <= 8:
+                return extracted
     
     # Pattern 2: Look for quoted idioms (keep your existing code here)
     quote_patterns = [
