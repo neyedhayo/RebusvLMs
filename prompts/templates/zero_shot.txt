@@ -1,2 +1,2 @@
 [Image: {{ target_filename }}]
-Q: "{{ question }} Output your final answer in three braces, like {{{this}}}." {% if cot %}Let's think step by step.{% endif %}
+Q: "{{ question }} Output your final answer in three braces, like {% raw %}{{{this}}}{% endraw %}." {% if cot %}Let's think step by step.{% endif %}

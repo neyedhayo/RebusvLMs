@@ -1,8 +1,8 @@
-{% for ex in examples[:2] %}
+{% for ex in examples[:3] %}
 [Image: {{ ex.filename }}]
 Q: "{{ ex.question }}"
 A: "{{ ex.answer }}"
 
 {% endfor %}
 [Image: {{ target_filename }}]
-Q: "{{ question }} Output your final answer in three braces, like {{{this}}}."
+Q: "{{ question }} Output your final answer in three braces, like {% raw %}{{{this}}}{% endraw %}."
