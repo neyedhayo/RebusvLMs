@@ -1,9 +1,13 @@
 import os
+import sys
 import yaml
 import argparse
 import datetime
 import json
 from pathlib import Path
+
+project_root = Path(__file__).parent.parent  # Go up from experiments/ to RebusvLMs/
+sys.path.insert(0, str(project_root))
 
 from data.load_data import load_dataset
 from prompts.builder import PromptBuilder
