@@ -8,9 +8,29 @@ python experiments/run_experiment.py \
   --config gemini2.0.yaml \
   --prompt-style zero_shot
 
+# Retry failed images
+python experiments/retry_failed_exp.py \
+  --timestamp 20250617_140547 \
+  --config gemini2.0.yaml \
+  --prompt-style zero_shot \
+  --delay 15
+
+
 # ⚠️ COPY THE TIMESTAMP FROM OUTPUT ABOVE, then run:
 python experiments/evaluate.py --timestamp REPLACE_WITH_TIMESTAMP --use-extraction --use-f1
 python quick_evaluate.py --timestamp REPLACE_WITH_TIMESTAMP
+
+#============================== NEW CONDITION ========================================
+# Simple evaluation with extraction enabled by default
+python experiments/evaluate.py --timestamp 20250617_140547
+
+# With debug info to see extraction examples
+python experiments/evaluate.py --timestamp 20250617_140547 --debug
+
+# If you want raw comparison without extraction
+python experiments/evaluate.py --timestamp 20250617_140547 --no-use-extraction
+
+#=====================================================================================
 
 # 🔵 Experiment 2: Gemini 2.0 - Few-Shot 2 CoT
 echo "📋 [2/10] Gemini 2.0 - Few-Shot 2 CoT"

@@ -18,21 +18,20 @@ def extract_idiom(text: str) -> str:
     
     text = text.strip()
     
-    # Pattern 1: Look for triple curly brackets (highest priority) - FIXED
-    triple_brace_pattern = r'\{\{\{([^}]+?)\}\}\}'  # Added ? for non-greedy matching
-    match = re.search(triple_brace_pattern, text)
+    # Pattern 1: Look for triple curly brackets (highest priority)
+    triple_brace_pattern = r'\{\{\{([^}]+?)\}\}\}'
+    match = re.search(triple_brace_pattern, text, re.DOTALL)
     if match:
         extracted = match.group(1).strip()
-        # Don't clean triple brackets here, just validate
         if extracted and len(extracted) > 0:
             cleaned = clean_extracted_idiom(extracted)
             if is_likely_idiom(cleaned):
                 return cleaned
             # If cleaning made it invalid, return the raw extracted content
             elif len(extracted.split()) >= 2 and len(extracted.split()) <= 8:
-                return extracted
+                return extracted.strip()
     
-    # Pattern 2: Look for quoted idioms (keep your existing code here)
+    # Pattern 2: Look for quoted idioms
     quote_patterns = [
         r'"([^"]+)"',
         r"'([^']+)'",
@@ -46,7 +45,7 @@ def extract_idiom(text: str) -> str:
             if is_likely_idiom(cleaned):
                 return cleaned
     
-    # Pattern 3: Look for "The idiom is:" or similar (keep your existing code)
+    # Pattern 3: Look for "The idiom is:" or similar
     idiom_intro_patterns = [
         r'(?:the idiom is|idiom is|answer is|solution is)[:.]?\s*(.+?)(?:\.|$)',
         r'(?:this idiom is|it is|this is)[:.]?\s*(.+?)(?:\.|$)',
@@ -61,7 +60,7 @@ def extract_idiom(text: str) -> str:
             if is_likely_idiom(cleaned):
                 return cleaned
     
-    # Pattern 3: Look for standalone phrases on their own lines
+    # Pattern 4: Look for standalone phrases on their own lines
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     for line in lines:
         if not is_description_text(line):
@@ -69,7 +68,7 @@ def extract_idiom(text: str) -> str:
             if is_likely_idiom(cleaned):
                 return cleaned
     
-    # Pattern 4: Extract from the first sentence if it looks like an idiom
+    # Pattern 5: Extract from the first sentence if it looks like an idiom
     sentences = re.split(r'[.!?]+', text)
     if sentences:
         first_sentence = sentences[0].strip()
@@ -77,7 +76,7 @@ def extract_idiom(text: str) -> str:
         if is_likely_idiom(cleaned):
             return cleaned
     
-    # Pattern 5: Look for common idiom patterns in the text
+    # Pattern 6: Look for common idiom patterns in the text
     idiom_candidates = []
     
     # Find phrases that look like idioms (3-8 words, common idiom words)
@@ -139,7 +138,8 @@ def clean_extracted_idiom(text: str) -> str:
     
     cleaned = text.strip()
     
-    # ADD THIS: Remove triple curly braces if they wrap the entire string
+    # Remove triple curly braces if they wrap the entire string
+    # (This should not happen if extraction worked correctly, but just in case)
     if cleaned.startswith('{{{') and cleaned.endswith('}}}'):
         cleaned = cleaned[3:-3].strip()
     
@@ -151,7 +151,6 @@ def clean_extracted_idiom(text: str) -> str:
         r'^(?:this idiom|this rebus|this puzzle)[:.]?\s*(?:represents|means|shows|is)[:.]?\s*'
     ]
     
-    cleaned = text.strip()
     for prefix in prefixes_to_remove:
         cleaned = re.sub(prefix, '', cleaned, flags=re.IGNORECASE)
     
@@ -208,30 +207,11 @@ def is_likely_idiom(text: str) -> bool:
     
     # Check word count (idioms are usually 2-10 words)
     word_count = len(text.split())
-    if word_count < 2 or word_count > 10:
-        return False
-    
-    # Should not be a single word (unless it's a very short phrase)
-    if word_count == 1 and len(text) < 8:
+    if word_count < 1 or word_count > 10:  # Allow single words for some idioms
         return False
     
     # Check for description indicators
     if is_description_text(text):
-        return False
-    
-    # Check for common idiom words/patterns
-    idiom_words = {
-        'the', 'a', 'an', 'in', 'on', 'at', 'by', 'for', 'with', 'to', 'of',
-        'bucket', 'horse', 'cat', 'dog', 'fish', 'bird', 'ice', 'fire', 'time',
-        'drop', 'break', 'cut', 'kick', 'jump', 'throw', 'catch', 'hold',
-        'over', 'under', 'around', 'through', 'between', 'behind', 'beyond'
-    }
-    
-    words = set(text.lower().split())
-    has_idiom_words = len(words.intersection(idiom_words)) > 0
-    
-    # Should have at least some common words or look like a phrase
-    if not has_idiom_words and word_count > 3:
         return False
     
     return True
@@ -320,12 +300,19 @@ def parse_args():
     parser.add_argument(
         "--use-f1",
         action="store_true",
+        default=True,  # Changed: default to True
         help="Also compute macro F1 over tokenized predictions"
     )
     parser.add_argument(
         "--use-extraction",
         action="store_true",
+        default=True,  # Changed: default to True since this is what they want
         help="Use advanced idiom extraction before evaluation"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Show detailed debug information"
     )
     return parser.parse_args()
 
@@ -342,14 +329,7 @@ def load_results(logs_dir: str, timestamp: str) -> List[dict]:
         return json.load(f)
 
 
-def tokenize(text: str) -> List[str]:
-    """
-    Simple whitespace tokenizer, lowercased.
-    """
-    return text.lower().split()
-
-
-def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = False) -> dict:
+def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = False, debug: bool = False) -> dict:
     """
     Compute accuracy and optionally macro F1 with advanced idiom extraction.
     Returns a metrics dict.
@@ -358,7 +338,9 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
     y_pred = []
     y_pred_extracted = []
     
-    for r in results:
+    extraction_debug = []
+    
+    for i, r in enumerate(results):
         ground_truth = r["ground_truth"]
         prediction = r["prediction"]
         
@@ -366,6 +348,14 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
         if use_extraction:
             extracted_prediction = extract_idiom(prediction)
             y_pred_extracted.append(extracted_prediction)
+            
+            if debug and i < 5:  # Show first 5 examples
+                extraction_debug.append({
+                    "image_id": r.get("image_id", f"sample_{i}"),
+                    "ground_truth": ground_truth,
+                    "raw_prediction": prediction[:200] + "..." if len(prediction) > 200 else prediction,
+                    "extracted": extracted_prediction
+                })
         else:
             extracted_prediction = prediction
         
@@ -379,8 +369,9 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
     normalized_true = [normalize_idiom(gt) for gt in y_true]
     normalized_pred = [normalize_idiom(pred) for pred in eval_predictions]
     
-    exact_match = sum(1 for gt, pred in zip(normalized_true, normalized_pred) 
-                     if gt == pred) / len(normalized_true)
+    exact_matches = sum(1 for gt, pred in zip(normalized_true, normalized_pred) 
+                       if gt == pred)
+    exact_match = exact_matches / len(normalized_true) if normalized_true else 0
     
     # Raw accuracy (without normalization)
     raw_accuracy = accuracy_score(y_true, eval_predictions)
@@ -388,16 +379,19 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
     metrics = {
         "exact_match_accuracy": exact_match,
         "raw_accuracy": raw_accuracy,
-        "total_samples": len(results)
+        "total_samples": len(results),
+        "exact_matches": exact_matches
     }
     
     if use_extraction:
         metrics["extraction_enabled"] = True
         # Also compute accuracy on raw predictions for comparison
-        raw_exact_match = sum(1 for gt, pred in zip(normalized_true, 
-                             [normalize_idiom(p) for p in y_pred]) 
-                             if gt == pred) / len(normalized_true)
+        raw_normalized_pred = [normalize_idiom(p) for p in y_pred]
+        raw_exact_matches = sum(1 for gt, pred in zip(normalized_true, raw_normalized_pred) 
+                               if gt == pred)
+        raw_exact_match = raw_exact_matches / len(normalized_true) if normalized_true else 0
         metrics["raw_exact_match_accuracy"] = raw_exact_match
+        metrics["raw_exact_matches"] = raw_exact_matches
     
     if use_f1:
         # Token-level F1 scores
@@ -407,7 +401,9 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
             token_f1s.append(f1_score)
         
         metrics["macro_f1"] = sum(token_f1s) / len(token_f1s) if token_f1s else 0.0
-        metrics["token_f1_scores"] = token_f1s
+    
+    if debug:
+        metrics["extraction_debug"] = extraction_debug
     
     return metrics
 
@@ -415,32 +411,64 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
 def main():
     args = parse_args()
     
+    print(f"🔍 Evaluating results from {args.timestamp}")
+    print(f"📁 Looking in: {args.logs_dir}/{args.timestamp}/")
+    print(f"🔧 Settings: extraction={args.use_extraction}, f1={args.use_f1}, debug={args.debug}")
+    print("=" * 60)
+    
     # 1. Load results
-    results = load_results(args.logs_dir, args.timestamp)
+    try:
+        results = load_results(args.logs_dir, args.timestamp)
+        print(f"✅ Loaded {len(results)} results")
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+        return
     
     # 2. Evaluate
-    metrics = evaluate(results, use_f1=args.use_f1, use_extraction=args.use_extraction)
+    metrics = evaluate(results, use_f1=args.use_f1, use_extraction=args.use_extraction, debug=args.debug)
     
     # 3. Write metrics.json
     out_dir = os.path.join(args.logs_dir, args.timestamp)
     metrics_path = os.path.join(out_dir, "metrics.json")
+    
+    # Remove debug info before saving
+    save_metrics = {k: v for k, v in metrics.items() if k != "extraction_debug"}
+    
     with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=2)
+        json.dump(save_metrics, f, indent=2)
     
     # 4. Print summary
-    print(f"Results for run {args.timestamp}")
-    print(f"  Total samples: {metrics['total_samples']}")
-    print(f"  Exact-match accuracy: {metrics['exact_match_accuracy']:.4f}")
-    print(f"  Raw accuracy: {metrics['raw_accuracy']:.4f}")
+    print(f"\n📊 EVALUATION RESULTS")
+    print("=" * 40)
+    print(f"Total samples:           {metrics['total_samples']}")
+    print(f"Exact matches:           {metrics['exact_matches']}")
+    print(f"Exact match accuracy:    {metrics['exact_match_accuracy']:.4f} ({metrics['exact_match_accuracy']*100:.1f}%)")
+    print(f"Raw accuracy:            {metrics['raw_accuracy']:.4f} ({metrics['raw_accuracy']*100:.1f}%)")
     
     if args.use_extraction:
-        print(f"  Raw exact-match (no extraction): {metrics.get('raw_exact_match_accuracy', 0):.4f}")
-        print(f"  Extraction enabled: {metrics.get('extraction_enabled', False)}")
+        print(f"Raw exact matches:       {metrics.get('raw_exact_matches', 0)}")
+        print(f"Raw exact match accuracy: {metrics.get('raw_exact_match_accuracy', 0):.4f} ({metrics.get('raw_exact_match_accuracy', 0)*100:.1f}%)")
+        improvement = metrics['exact_match_accuracy'] - metrics.get('raw_exact_match_accuracy', 0)
+        print(f"Extraction improvement:  +{improvement:.4f} (+{improvement*100:.1f}%)")
     
     if args.use_f1:
-        print(f"  Macro F1 (token-level): {metrics.get('macro_f1', 0):.4f}")
+        print(f"Macro F1 (token-level):  {metrics.get('macro_f1', 0):.4f} ({metrics.get('macro_f1', 0)*100:.1f}%)")
     
-    print(f"Metrics written to {metrics_path}")
+    print(f"\n💾 Metrics saved to: {metrics_path}")
+    
+    # 5. Show debugging examples
+    if args.debug and "extraction_debug" in metrics:
+        print(f"\n🔍 EXTRACTION EXAMPLES")
+        print("=" * 40)
+        for example in metrics["extraction_debug"]:
+            print(f"\nImage: {example['image_id']}")
+            print(f"GT: {example['ground_truth']}")
+            print(f"Raw: {example['raw_prediction']}")
+            print(f"Extracted: {example['extracted']}")
+            gt_norm = normalize_idiom(example['ground_truth'])
+            ext_norm = normalize_idiom(example['extracted'])
+            match = "✅" if gt_norm == ext_norm else "❌"
+            print(f"Match: {match} ('{gt_norm}' vs '{ext_norm}')")
 
 
 if __name__ == "__main__":
