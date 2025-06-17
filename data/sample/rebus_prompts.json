@@ -1,7 +1,7 @@
 {
   "zero_shot": [
     {
-      "filename": "sample_target.jpg",
+      "filename": "006.jpg",
       "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}."
     }
   ],
