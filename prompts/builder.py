@@ -8,15 +8,8 @@ class PromptBuilder:
         base = os.path.dirname(os.path.abspath(__file__))
         self.templates_dir = os.path.join(base, "templates")
         
-        # Handle both relative and absolute paths
-        examples_dir = config["dataset"]["examples_dir"]
-        if not os.path.isabs(examples_dir):
-            project_root = os.path.dirname(os.path.dirname(base))
-            self.examples_dir = os.path.join(project_root, examples_dir)
-        else:
-            self.examples_dir = examples_dir
-            
-        # full path to your JSON
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up from prompts/ to RebusvLMs/
+        self.examples_dir = os.path.join(project_root, config["dataset"]["examples_dir"])
         self.prompts_json = os.path.join(self.examples_dir, "rebus_prompts.json")
 
         # load the JSON once

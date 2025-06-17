@@ -3,7 +3,7 @@ location: ${GOOGLE_CLOUD_LOCATION}
 use_vertexai: ${GOOGLE_GENAI_USE_VERTEXAI}
 
 dataset:
-  images_dir: "data/raw/images"
+  images_dir: "data/raw/img"
   annotations_file: "data/raw/annotations.csv"
   examples_dir: "data/sample"
 
