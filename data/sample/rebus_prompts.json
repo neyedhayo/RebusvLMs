@@ -1,55 +1,67 @@
 {
-    "fewshot_cot": [
-      {
-        "filename": "001.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "rationale": "The rebus contains the word bucket written in bold uppercase and there is a red droplet in the letter 'U', resembling a drop of liquid. Putting these clues together gives “A drop in the bucket.”"
-      },
-      {
-        "filename": "002.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "rationale": "The word “Edition” appears three times stacked, with the top one underlined—meaning 'first edition.'"
-      },
-      {
-        "filename": "003.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "rationale": "The phrase “kick the” is shaped like a V (the bottom of a bucket), together forming “kick the bucket.”"
-      },
-      {
-        "filename": "004.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "rationale": "“FEELING” is faded in the background under “WEATHER” in bold—i.e. feeling under the weather."
-      },
-      {
-        "filename": "005.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "rationale": "The word “CUT” surrounded by dots at each corner and a red line cutting through—meaning “cut corners.”"
-      }
-    ],
-  
-    "fewshot_nocot": [
-      {
-        "filename": "001.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "answer": "A drop in the bucket"
-      },
-      {
-        "filename": "002.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "answer": "First edition"
-      },
-      {
-        "filename": "003.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?",
-        "answer": "Kick the bucket"
-      }
-    ],
-  
-    "zero_shot": [
-      {
-        "filename": "006.jpg",
-        "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?"
-      }
-    ]
-  }
-  
+  "zero_shot": [
+    {
+      "filename": "sample_target.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}."
+    }
+  ],
+  "fewshot_cot": [
+    {
+      "filename": "001.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{A drop in the bucket}}}",
+      "rationale": "Looking at this image, I can see a water drop falling into a bucket. The phrase 'a drop in the bucket' is a common idiom meaning a very small amount compared to what is needed or the whole. The visual representation literally shows a drop going into a bucket, which perfectly represents this idiom. Therefore, the answer is {{{A drop in the bucket}}}."
+    },
+    {
+      "filename": "002.jpg", 
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{first edition}}}",
+      "rationale": "I can see the number '1' followed by what appears to be editing or writing symbols. The number '1' represents 'first' and the editing symbols represent 'edition'. This is literally showing 'first edition', which refers to the first published version of a book or document. The visual clues directly spell out this phrase. Therefore, the answer is {{{first edition}}}."
+    },
+    {
+      "filename": "003.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{kick the bucket}}}", 
+      "rationale": "This image shows a foot or leg in a kicking motion toward a bucket. 'Kick the bucket' is a well-known idiom that means to die. The visual representation literally shows someone kicking a bucket, which is exactly what the idiom describes. Therefore, the answer is {{{kick the bucket}}}."
+    },
+    {
+      "filename": "004.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{feeling under the weather}}}",
+      "rationale": "I can see a person or figure positioned below some weather symbols (like clouds, rain, or storm elements). The phrase 'feeling under the weather' means feeling sick or unwell. The visual shows someone literally under weather elements, which represents this common idiom. Therefore, the answer is {{{feeling under the weather}}}."
+    },
+    {
+      "filename": "005.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{don't cut corners}}}",
+      "rationale": "This image appears to show corners that are not being cut or a path that goes around corners rather than cutting through them. 'Don't cut corners' is an idiom meaning don't take shortcuts or do something hastily without proper care. The visual representation shows the literal concept of not cutting corners, which represents this idiom about maintaining quality and not taking shortcuts. Therefore, the answer is {{{don't cut corners}}}."
+    }
+  ],
+  "fewshot_nocot": [
+    {
+      "filename": "001.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{A drop in the bucket}}}"
+    },
+    {
+      "filename": "002.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.", 
+      "answer": "{{{first edition}}}"
+    },
+    {
+      "filename": "003.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{kick the bucket}}}"
+    },
+    {
+      "filename": "004.jpg", 
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{feeling under the weather}}}"
+    },
+    {
+      "filename": "005.jpg",
+      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
+      "answer": "{{{don't cut corners}}}"
+    }
+  ]
+}

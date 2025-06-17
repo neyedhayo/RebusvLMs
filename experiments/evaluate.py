@@ -11,13 +11,23 @@ def extract_idiom(text: str) -> str:
     """
     Extract the most likely idiom from model response text.
     Handles various response formats and extracts clean idiom phrases.
+    Prioritizes triple curly bracket format {{{answer}}}.
     """
     if not text or not text.strip():
         return ""
     
     text = text.strip()
     
-    # Pattern 1: Look for quoted idioms
+    # Pattern 1: Look for triple curly brackets (highest priority) - NEW
+    triple_brace_pattern = r'\{\{\{([^}]+)\}\}\}'
+    match = re.search(triple_brace_pattern, text)
+    if match:
+        extracted = match.group(1).strip()
+        cleaned = clean_extracted_idiom(extracted)
+        if is_likely_idiom(cleaned):
+            return cleaned
+    
+    # Pattern 2: Look for quoted idioms (keep your existing code here)
     quote_patterns = [
         r'"([^"]+)"',
         r"'([^']+)'",
@@ -31,7 +41,7 @@ def extract_idiom(text: str) -> str:
             if is_likely_idiom(cleaned):
                 return cleaned
     
-    # Pattern 2: Look for "The idiom is:" or similar
+    # Pattern 3: Look for "The idiom is:" or similar (keep your existing code)
     idiom_intro_patterns = [
         r'(?:the idiom is|idiom is|answer is|solution is)[:.]?\s*(.+?)(?:\.|$)',
         r'(?:this idiom is|it is|this is)[:.]?\s*(.+?)(?:\.|$)',
