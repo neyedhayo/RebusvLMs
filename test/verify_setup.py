@@ -3,48 +3,48 @@ import sys
 import importlib.util
 from pathlib import Path
 
+# Add the project root to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+
 def check_file_exists(filepath: str) -> bool:
-    """Check if file exists"""
-    return Path(filepath).exists()
+    """Check if a file exists."""
+    return os.path.exists(filepath)
 
-def check_function_in_file(filepath: str, function_name: str) -> bool:
-    """Check if function is defined in file"""
+
+def check_function_exists(module_path: str, function_name: str) -> bool:
+    """Check if a function exists in a module."""
     try:
-        with open(filepath, 'r') as f:
-            content = f.read()
-            return f"def {function_name}" in content
-    except:
+        spec = importlib.util.spec_from_file_location("module", module_path)
+        if spec is None or spec.loader is None:
+            return False
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return hasattr(module, function_name)
+    except Exception:
         return False
 
-def test_import(module_path: str, from_name: str = None) -> bool:
-    """Test if module can be imported"""
+
+def check_import_works(module_name: str) -> bool:
+    """Check if a module can be imported."""
     try:
-        if from_name:
-            spec = importlib.util.spec_from_file_location(from_name, module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-        else:
-            exec(f"import {module_path}")
+        importlib.import_module(module_name)
         return True
-    except Exception as e:
-        print(f"    ❌ Import error: {e}")
+    except ImportError:
         return False
 
-def verify_setup():
-    """Verify all components are properly set up"""
-    print("🔍 Verifying Complete Setup")
-    print("=" * 50)
+
+def verify_file_structure():
+    """Verify that all required files exist."""
+    print("📁 Checking File Existence:")
     
-    checks = []
-    
-    # 1. Check file existence
-    print("\n📁 Checking File Existence:")
-    files_to_check = [
+    required_files = [
         "experiments/evaluate.py",
         "experiments/run_experiment.py", 
         "experiments/utils.py",
         "debug_results.py",
-        "test_extraction.py",
+        "test/test_extraction.py",
         "quick_evaluate.py",
         "models/base_client.py",
         "models/gemini1_5.py",
@@ -59,19 +59,22 @@ def verify_setup():
         "requirements.txt"
     ]
     
-    file_checks = 0
-    for filepath in files_to_check:
-        exists = check_file_exists(filepath)
-        status = "✅" if exists else "❌"
-        print(f"  {status} {filepath}")
-        if exists:
-            file_checks += 1
+    passed = 0
+    for file_path in required_files:
+        if check_file_exists(file_path):
+            print(f"  ✅ {file_path}")
+            passed += 1
+        else:
+            print(f"  ❌ {file_path}")
     
-    checks.append(("File Existence", file_checks, len(files_to_check)))
+    return passed, len(required_files)
+
+
+def verify_evaluate_functions():
+    """Verify that evaluate.py has all required functions."""
+    print("🔧 Checking Functions in evaluate.py:")
     
-    # 2. Check critical functions in evaluate.py
-    print(f"\n🔧 Checking Functions in evaluate.py:")
-    functions_to_check = [
+    required_functions = [
         "extract_idiom",
         "normalize_idiom", 
         "clean_extracted_idiom",
@@ -83,66 +86,118 @@ def verify_setup():
         "main"
     ]
     
-    function_checks = 0
-    for func in functions_to_check:
-        exists = check_function_in_file("experiments/evaluate.py", func)
-        status = "✅" if exists else "❌"
-        print(f"  {status} {func}")
-        if exists:
-            function_checks += 1
+    evaluate_path = "experiments/evaluate.py"
+    passed = 0
     
-    checks.append(("Functions in evaluate.py", function_checks, len(functions_to_check)))
+    for func_name in required_functions:
+        if check_function_exists(evaluate_path, func_name):
+            print(f"  ✅ {func_name}")
+            passed += 1
+        else:
+            print(f"  ❌ {func_name}")
     
-    # 3. Check environment variable expansion in run_experiment.py
-    print(f"\n🔧 Checking Environment Variable Expansion:")
-    has_expand_function = check_function_in_file("experiments/run_experiment.py", "expand_env_vars_recursive")
-    has_load_config = check_function_in_file("experiments/run_experiment.py", "load_config_files")
+    return passed, len(required_functions)
+
+
+def verify_debug_functions():
+    """Verify that debug_results.py has required functions."""
+    print("🔧 Checking Functions in debug_results.py:")
     
-    env_checks = 0
-    print(f"  {'✅' if has_expand_function else '❌'} expand_env_vars_recursive function")
-    if has_expand_function:
-        env_checks += 1
-    print(f"  {'✅' if has_load_config else '❌'} load_config_files function")
-    if has_load_config:
-        env_checks += 1
-    
-    checks.append(("Environment Variable Functions", env_checks, 2))
-    
-    # 4. Check extraction functions in debug_results.py
-    print(f"\n🔧 Checking Functions in debug_results.py:")
-    debug_functions = ["extract_idiom", "normalize_idiom", "clean_extracted_idiom"]
-    
-    debug_checks = 0
-    for func in debug_functions:
-        exists = check_function_in_file("debug_results.py", func)
-        status = "✅" if exists else "❌"
-        print(f"  {status} {func}")
-        if exists:
-            debug_checks += 1
-    
-    checks.append(("Functions in debug_results.py", debug_checks, len(debug_functions)))
-    
-    # 5. Check __init__.py files
-    print(f"\n📦 Checking __init__.py Files:")
-    init_files = [
-        "models/__init__.py",
-        "experiments/__init__.py",
-        "prompts/__init__.py", 
-        "data/__init__.py"
+    required_functions = [
+        "extract_idiom",  # Should be imported from experiments.evaluate
+        "normalize_idiom", # Should be imported from experiments.evaluate  
+        "clean_extracted_idiom"  # Should be imported from experiments.evaluate
     ]
     
-    init_checks = 0
-    for init_file in init_files:
-        exists = check_file_exists(init_file)
-        status = "✅" if exists else "❌"
-        print(f"  {status} {init_file}")
-        if exists:
-            init_checks += 1
+    debug_path = "debug_results.py"
+    passed = 0
     
-    checks.append(("__init__.py files", init_checks, len(init_files)))
+    if not check_file_exists(debug_path):
+        print(f"  ❌ {debug_path} not found")
+        return 0, len(required_functions)
     
-    # 6. Check requirements.txt content
-    print(f"\n📦 Checking Requirements:")
+    # For debug_results.py, we just check if the file imports correctly
+    # The functions are imported from experiments.evaluate
+    try:
+        spec = importlib.util.spec_from_file_location("debug_results", debug_path)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            # Check if the imports worked
+            if hasattr(module, 'extract_idiom'):
+                print(f"  ✅ extract_idiom (imported)")
+                passed += 1
+            else:
+                print(f"  ❌ extract_idiom")
+                
+            if hasattr(module, 'normalize_idiom'):
+                print(f"  ✅ normalize_idiom (imported)")
+                passed += 1
+            else:
+                print(f"  ❌ normalize_idiom")
+                
+            if hasattr(module, 'clean_extracted_idiom'):
+                print(f"  ✅ clean_extracted_idiom (imported)")
+                passed += 1
+            else:
+                print(f"  ❌ clean_extracted_idiom")
+    except Exception as e:
+        print(f"  ❌ Error loading debug_results.py: {e}")
+    
+    return passed, len(required_functions)
+
+
+def verify_init_files():
+    """Verify that __init__.py files exist."""
+    print("📦 Checking __init__.py Files:")
+    
+    required_init_dirs = [
+        "models",
+        "experiments", 
+        "prompts",
+        "data"
+    ]
+    
+    passed = 0
+    for dir_name in required_init_dirs:
+        init_path = os.path.join(dir_name, "__init__.py")
+        if check_file_exists(init_path):
+            print(f"  ✅ {init_path}")
+            passed += 1
+        else:
+            print(f"  ❌ {init_path}")
+    
+    return passed, len(required_init_dirs)
+
+
+def verify_imports():
+    """Verify that key modules can be imported."""
+    print("📦 Checking Module Imports:")
+    
+    modules_to_test = [
+        "experiments.evaluate",
+        "experiments.utils", 
+        "models.base_client",
+        "data.load_data",
+        "prompts.builder"
+    ]
+    
+    passed = 0
+    for module_name in modules_to_test:
+        if check_import_works(module_name):
+            print(f"  ✅ {module_name}")
+            passed += 1
+        else:
+            print(f"  ❌ {module_name}")
+    
+    return passed, len(modules_to_test)
+
+
+def verify_requirements():
+    """Verify that requirements.txt has necessary packages."""
+    print("📦 Checking Requirements:")
+    
     required_packages = [
         "google-cloud-aiplatform",
         "google-genai", 
@@ -154,54 +209,85 @@ def verify_setup():
         "scikit-learn"
     ]
     
-    req_checks = 0
-    try:
-        with open("requirements.txt", 'r') as f:
-            req_content = f.read()
-            for package in required_packages:
-                if package in req_content:
-                    print(f"  ✅ {package}")
-                    req_checks += 1
-                else:
-                    print(f"  ❌ {package}")
-    except:
-        print(f"  ❌ Could not read requirements.txt")
+    requirements_path = "requirements.txt"
+    passed = 0
     
-    checks.append(("Required packages", req_checks, len(required_packages)))
+    if not check_file_exists(requirements_path):
+        print(f"  ❌ {requirements_path} not found")
+        return 0, len(required_packages)
     
-    # Summary
-    print(f"\n📊 Verification Summary:")
+    with open(requirements_path, 'r') as f:
+        requirements_content = f.read()
+    
+    for package in required_packages:
+        if package.lower() in requirements_content.lower():
+            print(f"  ✅ {package}")
+            passed += 1
+        else:
+            print(f"  ❌ {package}")
+    
+    return passed, len(required_packages)
+
+
+def main():
+    """Run complete setup verification."""
+    print("🔍 Verifying Complete Setup")
+    print("=" * 50)
+    
+    # Run all verification checks
+    checks = [
+        ("File Existence", verify_file_structure),
+        ("Functions in evaluate.py", verify_evaluate_functions),
+        ("Functions in debug_results.py", verify_debug_functions),
+        ("__init__.py files", verify_init_files),
+        ("Module Imports", verify_imports),
+        ("Required packages", verify_requirements)
+    ]
+    
+    total_passed = 0
+    total_checks = 0
+    results = []
+    
+    for check_name, check_func in checks:
+        try:
+            passed, total = check_func()
+            total_passed += passed
+            total_checks += total
+            success_rate = f"{passed}/{total} ({passed/total*100:.0f}%)"
+            
+            if passed == total:
+                status = "✅"
+            elif passed > total * 0.8:
+                status = "⚠️ "
+            else:
+                status = "❌"
+            
+            results.append((check_name, status, success_rate, passed == total))
+            print()
+            
+        except Exception as e:
+            print(f"❌ Error in {check_name}: {e}")
+            results.append((check_name, "❌", "0/? (Error)", False))
+            print()
+    
+    # Print summary
+    print("📊 Verification Summary:")
     print("=" * 30)
+    for check_name, status, success_rate, _ in results:
+        print(f"  {status} {check_name}: {success_rate}")
     
-    total_passed = sum(passed for _, passed, _ in checks)
-    total_possible = sum(total for _, _, total in checks)
+    overall_rate = f"{total_passed}/{total_checks} ({total_passed/total_checks*100:.0f}%)"
+    print(f"🎯 Overall Status: {overall_rate}")
     
-    for name, passed, total in checks:
-        percentage = (passed / total * 100) if total > 0 else 0
-        status = "✅" if passed == total else "⚠️" if passed > total * 0.8 else "❌"
-        print(f"  {status} {name}: {passed}/{total} ({percentage:.0f}%)")
-    
-    overall_percentage = (total_passed / total_possible * 100) if total_possible > 0 else 0
-    
-    print(f"\n🎯 Overall Status: {total_passed}/{total_possible} ({overall_percentage:.0f}%)")
-    
-    if overall_percentage >= 95:
-        print("🎉 Setup is ready! You can run experiments.")
-        return True
-    elif overall_percentage >= 80:
-        print("⚠️  Setup is mostly ready, but some issues need fixing.")
-        return False
+    all_passed = all(result[3] for result in results)
+    if all_passed:
+        print("🎉 All checks passed! Setup is complete.")
+    elif total_passed / total_checks > 0.9:
+        print("✅ Setup is mostly ready, minor issues to fix.")
     else:
-        print("❌ Setup has significant issues that need to be resolved.")
-        return False
+        print("⚠️  Setup is mostly ready, but some issues need fixing.")
+        print("🔧 Fix the issues above before running experiments.")
+
 
 if __name__ == "__main__":
-    success = verify_setup()
-    
-    if success:
-        print(f"\n🚀 Next Steps:")
-        print(f"1. Run: python test_extraction.py")
-        print(f"2. Run: python -m experiments.run_experiment --config gemini1.5.yaml --prompt-style zero_shot")
-        print(f"3. Run: python quick_evaluate.py")
-    else:
-        print(f"\n🔧 Fix the issues above before running experiments.")
+    main()

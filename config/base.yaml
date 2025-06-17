@@ -3,15 +3,18 @@ location: ${GOOGLE_CLOUD_LOCATION}
 use_vertexai: ${GOOGLE_GENAI_USE_VERTEXAI}
 
 dataset:
-  images_dir:       "data/raw/img"
+  images_dir: "data/raw/images"
   annotations_file: "data/raw/annotations.csv"
-  examples_dir:     "data/sample"
+  examples_dir: "data/sample"
+
+# Default question for all prompts
+prompt_question: "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is?"
 
 logging:
   level: "INFO"
-  dir:   "logs"
+  dir: "logs"
 
-# --- default prompt styles ---
+# Default prompt styles
 prompt_styles:
   - zero_shot
   - fewshot2_cot
@@ -20,6 +23,11 @@ prompt_styles:
   - fewshot3_nocot
 
 request:
-  batch_size:      4
+  batch_size: 4
   timeout_seconds: 60
 
+# Evaluation settings
+evaluation:
+  use_extraction: true
+  use_f1: true
+  normalize_for_comparison: true
