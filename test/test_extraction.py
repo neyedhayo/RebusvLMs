@@ -230,6 +230,50 @@ def test_calculate_token_f1():
     print(f"calculate_token_f1: {passed} passed, {failed} failed")
     return failed == 0
 
+def test_triple_bracket_extraction():
+    """Test the triple bracket format extraction (highest priority)."""
+    print("\n🔗 Testing triple bracket format extraction...")
+    
+    test_cases = [
+        # Triple bracket format should have highest priority
+        ('The answer is {{{piece of cake}}}', "piece of cake"),
+        ('Looking at this image, {{{break the ice}}} is shown', "break the ice"),
+        ('{{{spill the beans}}} - this is the idiom', "spill the beans"),
+        ('After thinking step by step, {{{kick the bucket}}}', "kick the bucket"),
+        
+        # Mixed formats - should still pick triple brackets over quotes
+        ('The idiom "wrong answer" but actually {{{drop in bucket}}}', "drop in bucket"),
+        ('I think "incorrect" however the real answer is {{{hold your horses}}}', "hold your horses"),
+        
+        # Edge cases
+        ('Multiple {{{first answer}}} and {{{second answer}}} brackets', "first answer"),  # Should pick first
+        ('{{{face the music}}} is clearly shown', "face the music"),
+        
+        # Malformed brackets should fall back to other methods
+        ('{{incomplete bracket piece of cake', "piece of cake"),  # Should extract via other patterns
+        ('No brackets just "quoted answer"', "quoted answer"),  # Should fall back to quotes
+    ]
+    
+    passed = 0
+    failed = 0
+    
+    for i, (input_text, expected) in enumerate(test_cases):
+        result = extract_idiom(input_text)
+        normalized_result = normalize_idiom(result)
+        normalized_expected = normalize_idiom(expected)
+        
+        if normalized_result == normalized_expected:
+            print(f"  ✅ Test {i+1}: PASS")
+            passed += 1
+        else:
+            print(f"  ❌ Test {i+1}: FAIL")
+            print(f"     Input: {repr(input_text)}")
+            print(f"     Expected: {repr(expected)}")
+            print(f"     Got: {repr(result)}")
+            failed += 1
+    
+    print(f"test_triple_bracket_extraction: {passed} passed, {failed} failed")
+    return failed == 0
 
 def test_integration():
     """Test the integration of extraction and evaluation."""

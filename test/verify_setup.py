@@ -228,6 +228,38 @@ def verify_requirements():
     
     return passed, len(required_packages)
 
+def check_triple_bracket_extraction():
+    """Check if triple bracket extraction works."""
+    print("🔗 Checking Triple Bracket Extraction:")
+    
+    try:
+        from experiments.evaluate import extract_idiom
+        
+        # Test cases for triple bracket format
+        test_cases = [
+            ('The answer is {{{piece of cake}}}', "piece of cake"),
+            ('Looking at this... {{{break the ice}}}', "break the ice"),
+            ('Mixed format "quoted" but {{{drop in bucket}}}', "drop in bucket"),
+            ('{{{face the music}}} is shown here', "face the music")
+        ]
+        
+        passed = 0
+        for text, expected in test_cases:
+            result = extract_idiom(text)
+            # Normalize for comparison
+            if expected.lower().replace(" ", "") in result.lower().replace(" ", ""):
+                print(f"  ✅ {expected}")
+                passed += 1
+            else:
+                print(f"  ❌ Expected: {expected}, Got: {result}")
+        
+        success_rate = f"{passed}/{len(test_cases)}"
+        print(f"  📊 Triple bracket extraction: {success_rate}")
+        return passed, len(test_cases)
+        
+    except Exception as e:
+        print(f"  ❌ Triple bracket test failed: {e}")
+        return 0, 4
 
 def main():
     """Run complete setup verification."""

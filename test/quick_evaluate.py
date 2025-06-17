@@ -15,27 +15,27 @@ def quick_test_sample():
         {
             "image_id": "001", 
             "ground_truth": "a drop in the bucket",
-            "prediction": 'The idiom shown is "a drop in the bucket"'
+            "prediction": 'The idiom shown is {{{a drop in the bucket}}}'  # Triple bracket format
         },
         {
             "image_id": "002",
             "ground_truth": "piece of cake", 
-            "prediction": "This rebus represents piece of cake"
+            "prediction": "This rebus represents {{{piece of cake}}}"  # Triple bracket format
         },
         {
             "image_id": "003",
             "ground_truth": "break the ice",
-            "prediction": "Looking at this image, I think it shows breaking ice, so the idiom is break the ice"
+            "prediction": "Looking at this image, I think it shows {{{break the ice}}}"  # Triple bracket format
         },
         {
             "image_id": "004", 
             "ground_truth": "spill the beans",
-            "prediction": "spill beans"  # Missing article
+            "prediction": "spill beans"  # Missing article - test extraction
         },
         {
             "image_id": "005",
             "ground_truth": "kick the bucket", 
-            "prediction": "This is clearly about kicking a bucket - kick the bucket!"
+            "prediction": "This is clearly about kicking a bucket - {{{kick the bucket}}}!"  # Triple bracket format
         }
     ]
     

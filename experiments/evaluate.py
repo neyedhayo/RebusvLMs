@@ -18,7 +18,7 @@ def extract_idiom(text: str) -> str:
     
     text = text.strip()
     
-    # Pattern 1: Look for triple curly brackets (highest priority) - NEW
+    # ADD THIS AS PATTERN 1 (highest priority):
     triple_brace_pattern = r'\{\{\{([^}]+)\}\}\}'
     match = re.search(triple_brace_pattern, text)
     if match:
@@ -131,6 +131,12 @@ def clean_extracted_idiom(text: str) -> str:
     """
     if not text:
         return ""
+    
+    cleaned = text.strip()
+    
+    # ADD THIS: Remove triple curly braces if they wrap the entire string
+    if cleaned.startswith('{{{') and cleaned.endswith('}}}'):
+        cleaned = cleaned[3:-3].strip()
     
     # Remove common prefixes/suffixes
     prefixes_to_remove = [

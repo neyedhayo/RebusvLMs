@@ -1,3 +1,4 @@
+"""Experiment orchestration and evaluation utilities."""
 from .evaluate import evaluate, extract_idiom, normalize_idiom
 from .utils import ensure_dir
 

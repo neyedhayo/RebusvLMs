@@ -23,18 +23,6 @@
       "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
       "answer": "{{{kick the bucket}}}", 
       "rationale": "This image shows a foot or leg in a kicking motion toward a bucket. 'Kick the bucket' is a well-known idiom that means to die. The visual representation literally shows someone kicking a bucket, which is exactly what the idiom describes. Therefore, the answer is {{{kick the bucket}}}."
-    },
-    {
-      "filename": "004.jpg",
-      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
-      "answer": "{{{feeling under the weather}}}",
-      "rationale": "I can see a person or figure positioned below some weather symbols (like clouds, rain, or storm elements). The phrase 'feeling under the weather' means feeling sick or unwell. The visual shows someone literally under weather elements, which represents this common idiom. Therefore, the answer is {{{feeling under the weather}}}."
-    },
-    {
-      "filename": "005.jpg",
-      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
-      "answer": "{{{don't cut corners}}}",
-      "rationale": "This image appears to show corners that are not being cut or a path that goes around corners rather than cutting through them. 'Don't cut corners' is an idiom meaning don't take shortcuts or do something hastily without proper care. The visual representation shows the literal concept of not cutting corners, which represents this idiom about maintaining quality and not taking shortcuts. Therefore, the answer is {{{don't cut corners}}}."
     }
   ],
   "fewshot_nocot": [
@@ -52,16 +40,6 @@
       "filename": "003.jpg",
       "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
       "answer": "{{{kick the bucket}}}"
-    },
-    {
-      "filename": "004.jpg", 
-      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
-      "answer": "{{{feeling under the weather}}}"
-    },
-    {
-      "filename": "005.jpg",
-      "question": "This rebus puzzle is an Idiom which may contain text, figures, and other logical clues to represent the Idiom. Can you figure out what this Idiom is? Output your final answer in three braces, like {{{this}}}.",
-      "answer": "{{{don't cut corners}}}"
     }
   ]
 }
