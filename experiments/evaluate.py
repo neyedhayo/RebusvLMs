@@ -377,21 +377,33 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
     raw_accuracy = accuracy_score(y_true, eval_predictions)
     
     metrics = {
+        "total_samples": len(results),
+        "exact_matches": exact_matches,
         "exact_match_accuracy": exact_match,
         "raw_accuracy": raw_accuracy,
-        "total_samples": len(results),
-        "exact_matches": exact_matches
+        "extraction_enabled": use_extraction,
+        # Formatted versions with percentages
+        "exact_match_accuracy_formatted": f"{exact_match:.4f} ({exact_match*100:.1f}%)",
+        "raw_accuracy_formatted": f"{raw_accuracy:.4f} ({raw_accuracy*100:.1f}%)"
     }
     
     if use_extraction:
-        metrics["extraction_enabled"] = True
         # Also compute accuracy on raw predictions for comparison
         raw_normalized_pred = [normalize_idiom(p) for p in y_pred]
         raw_exact_matches = sum(1 for gt, pred in zip(normalized_true, raw_normalized_pred) 
                                if gt == pred)
         raw_exact_match = raw_exact_matches / len(normalized_true) if normalized_true else 0
-        metrics["raw_exact_match_accuracy"] = raw_exact_match
+        
+        # Calculate extraction improvement
+        extraction_improvement = exact_match - raw_exact_match
+        
         metrics["raw_exact_matches"] = raw_exact_matches
+        metrics["raw_exact_match_accuracy"] = raw_exact_match
+        metrics["extraction_improvement"] = extraction_improvement
+        
+        # Formatted versions
+        metrics["raw_exact_match_accuracy_formatted"] = f"{raw_exact_match:.4f} ({raw_exact_match*100:.1f}%)"
+        metrics["extraction_improvement_formatted"] = f"+{extraction_improvement:.4f} (+{extraction_improvement*100:.1f}%)"
     
     if use_f1:
         # Token-level F1 scores
@@ -400,7 +412,9 @@ def evaluate(results: List[dict], use_f1: bool = False, use_extraction: bool = F
             f1_score = calculate_token_f1(gt, pred)
             token_f1s.append(f1_score)
         
-        metrics["macro_f1"] = sum(token_f1s) / len(token_f1s) if token_f1s else 0.0
+        macro_f1 = sum(token_f1s) / len(token_f1s) if token_f1s else 0.0
+        metrics["macro_f1"] = macro_f1
+        metrics["macro_f1_formatted"] = f"{macro_f1:.4f} ({macro_f1*100:.1f}%)"
     
     if debug:
         metrics["extraction_debug"] = extraction_debug
@@ -442,17 +456,16 @@ def main():
     print("=" * 40)
     print(f"Total samples:           {metrics['total_samples']}")
     print(f"Exact matches:           {metrics['exact_matches']}")
-    print(f"Exact match accuracy:    {metrics['exact_match_accuracy']:.4f} ({metrics['exact_match_accuracy']*100:.1f}%)")
-    print(f"Raw accuracy:            {metrics['raw_accuracy']:.4f} ({metrics['raw_accuracy']*100:.1f}%)")
+    print(f"Exact match accuracy:    {metrics['exact_match_accuracy_formatted']}")
+    print(f"Raw accuracy:            {metrics['raw_accuracy_formatted']}")
     
     if args.use_extraction:
         print(f"Raw exact matches:       {metrics.get('raw_exact_matches', 0)}")
-        print(f"Raw exact match accuracy: {metrics.get('raw_exact_match_accuracy', 0):.4f} ({metrics.get('raw_exact_match_accuracy', 0)*100:.1f}%)")
-        improvement = metrics['exact_match_accuracy'] - metrics.get('raw_exact_match_accuracy', 0)
-        print(f"Extraction improvement:  +{improvement:.4f} (+{improvement*100:.1f}%)")
+        print(f"Raw exact match accuracy: {metrics.get('raw_exact_match_accuracy_formatted', 'N/A')}")
+        print(f"Extraction improvement:  {metrics.get('extraction_improvement_formatted', 'N/A')}")
     
     if args.use_f1:
-        print(f"Macro F1 (token-level):  {metrics.get('macro_f1', 0):.4f} ({metrics.get('macro_f1', 0)*100:.1f}%)")
+        print(f"Macro F1 (token-level):  {metrics.get('macro_f1_formatted', 'N/A')}")
     
     print(f"\n💾 Metrics saved to: {metrics_path}")
     

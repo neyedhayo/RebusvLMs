@@ -16,6 +16,16 @@ project_root = script_dir.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+# Load environment variables from .env file if it exists
+env_file = project_root / ".env"
+if env_file.exists():
+    with open(env_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ[key] = value
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Retry failed images from experiment")
     parser.add_argument("--timestamp", required=True, 
@@ -78,7 +88,12 @@ def retry_missing_images(args, missing_images: list):
     base = yaml.safe_load(open("config/base.yaml"))
     model = yaml.safe_load(open(f"config/{args.config}"))
     cfg = {**base, **model}
+    
+    # Expand environment variables in all config fields (not just model name)
     cfg["model"]["name"] = os.path.expandvars(cfg["model"]["name"])
+    cfg["project"] = os.path.expandvars(cfg["project"])
+    cfg["location"] = os.path.expandvars(cfg["location"])
+    cfg["use_vertexai"] = os.path.expandvars(cfg["use_vertexai"])
     
     # Setup
     builder = PromptBuilder(cfg)
@@ -190,6 +205,11 @@ def main():
     base = yaml.safe_load(open("config/base.yaml"))
     model = yaml.safe_load(open(f"config/{args.config}"))
     cfg = {**base, **model}
+    
+    # Expand environment variables
+    cfg["project"] = os.path.expandvars(cfg["project"])
+    cfg["location"] = os.path.expandvars(cfg["location"])
+    cfg["use_vertexai"] = os.path.expandvars(cfg["use_vertexai"])
     
     # Find missing images
     missing = find_missing_images(args.timestamp, cfg["dataset"]["images_dir"])
