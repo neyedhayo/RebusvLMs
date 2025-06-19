@@ -1,4 +1,4 @@
-{% for ex in examples[:3] %}
+{% for ex in examples[:2] %}
 [Image: {{ ex.filename }}]
 Q: "{{ ex.question }}"
 A: "{{ ex.answer }}"

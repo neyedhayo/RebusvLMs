@@ -2,6 +2,10 @@
 # Zero‐Shot (no examples_count needed)
 python -m experiments.run_experiment --config gemini1.5.yaml --prompt-style zero_shot
 
+python -m experiments.run_experiment \
+  --config gemini1.5.yaml \
+  --prompt-style zero_shot
+
 # 2-Shot + CoT
 python -m experiments.run_experiment.py \
   --config gemini1.5.yaml \
