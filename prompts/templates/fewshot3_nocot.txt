@@ -5,4 +5,4 @@ A: "{{ ex.answer }}"
 
 {% endfor %}
 [Image: {{ target_filename }}]
-Q: "{{ question }} Output your final answer in three braces, like {{{this}}}."
+Q: "{{ question }} Output your final answer in three braces, like {% raw %}{{{this}}}{% endraw %}."
