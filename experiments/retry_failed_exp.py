@@ -83,17 +83,21 @@ def retry_missing_images(args, missing_images: list):
     from data.load_data import load_dataset
     from prompts.builder import PromptBuilder
     from experiments.run_experiment import get_model_client
+    from experiments.utils import expand_env_vars_recursive
     
     # Load config (same as in run_experiment.py)
     base = yaml.safe_load(open("config/base.yaml"))
     model = yaml.safe_load(open(f"config/{args.config}"))
     cfg = {**base, **model}
     
-    # Expand environment variables in all config fields (not just model name)
-    cfg["model"]["name"] = os.path.expandvars(cfg["model"]["name"])
-    cfg["project"] = os.path.expandvars(cfg["project"])
-    cfg["location"] = os.path.expandvars(cfg["location"])
-    cfg["use_vertexai"] = os.path.expandvars(cfg["use_vertexai"])
+    # ✅ FIX: Use the proper utility function to expand ALL environment variables
+    cfg = expand_env_vars_recursive(cfg)
+    
+    print(f"🔧 Using model: {cfg['model']['name']}")
+    print(f"🔧 API type: {cfg['model'].get('api_type', 'studio')}")
+    if not cfg["model"].get("use_vertexai", False):
+        api_key_preview = cfg['model']['api_key'][:10] + "..." if len(cfg['model']['api_key']) > 10 else cfg['model']['api_key']
+        print(f"🔧 API key: {api_key_preview}")
     
     # Setup
     builder = PromptBuilder(cfg)
